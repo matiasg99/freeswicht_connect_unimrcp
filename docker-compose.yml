@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  freeswitch:
+    image: signalwire/freeswitch:latest
+    container_name: freeswitch
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "8021:8021"
+      - "16384-16484:16384-16484/udp"
+    networks:
+      - freeswitch_unimrcp_net
+    depends_on:
+      - unimrcp
+    environment:
+      - FREESWITCH_EVENT_SOCKET_PASSWORD=ClueCon
+    restart: unless-stopped
+
+  unimrcp:
+    image: unimrcp/unimrcp:latest
+    container_name: unimrcp
+    ports:
+      - "5062:5062/tcp"
+      - "1554:1554/tcp"
+    networks:
+      - freeswitch_unimrcp_net
+    restart: unless-stopped
+
+networks:
+  freeswitch_unimrcp_net:
+    driver: bridge
