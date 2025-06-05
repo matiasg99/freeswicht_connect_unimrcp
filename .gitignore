@@ -1,0 +1,33 @@
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de logs
+*.log
+logs/
+
+# Archivos temporales y de backup
+*.tmp
+*.swp
+*.swo
+*~
+
+# Archivos de configuración de entorno
+.env
+
+# Archivos de Docker
+*.pid
+docker-compose.override.yml
+
+# Salidas de compilación y dependencias
+node_modules/
+dist/
+build/
+
+# Archivos de configuración de editor
+.vscode/
+.idea/
+
+# Archivos generados por fs
+conf/autoload_configs/*.db
+conf/autoload_configs/*.sqlite
