@@ -1,0 +1,21 @@
+<!-- conf/autoload_configs/modules.conf.xml -->
+<configuration name="modules.conf" description="Loaded Modules">
+  <modules>
+
+    <!-- CORE – imprescindibles -->
+    <load module="mod_commands"/>
+    <load module="mod_dptools"/>
+    <load module="mod_sofia"/>          <!-- SIP -->
+    <load module="mod_loopback"/>
+    <load module="mod_conference"/>
+    <load module="mod_event_socket"/>   <!-- ESL puerto 8021 -->
+
+    <!--  Opcionales: descomenta los que uses  -->
+    <!-- <load module="mod_shout"/>  --> <!-- MP3/SHOUTcast Streaming -->
+    <!-- <load module="mod_flite"/>  --> <!-- TTS Flite -->
+    <!-- <load module="mod_say_es"/> --> <!-- Say español -->
+    <!-- etc. -->
+
+  </modules>
+</configuration>
+
