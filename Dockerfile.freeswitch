@@ -1,0 +1,68 @@
+# syntax=docker/dockerfile:1
+ARG FS_VERSION=1.10.12
+FROM debian:bullseye AS freeswitch-build
+
+ARG SIGNALWIRE_LOGIN
+ARG SIGNALWIRE_PASSWORD
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ── repo SignalWire ────────────────────────────────
+RUN apt-get update && \
+    apt-get install -y curl gnupg apt-transport-https ca-certificates && \
+    echo "machine freeswitch.signalwire.com login ${SIGNALWIRE_LOGIN} password ${SIGNALWIRE_PASSWORD}" \
+        > /etc/apt/auth.conf && \
+    curl -u "${SIGNALWIRE_LOGIN}:${SIGNALWIRE_PASSWORD}" \
+         -o /etc/apt/trusted.gpg.d/signalwire.gpg \
+         https://freeswitch.signalwire.com/repo/deb/debian-release/signalwire-freeswitch-repo.gpg && \
+    echo "deb [signed-by=/etc/apt/trusted.gpg.d/signalwire.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ bullseye main" \
+        > /etc/apt/sources.list.d/freeswitch.list
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        freeswitch=${FS_VERSION}* \
+        freeswitch-mod-shout freeswitch-mod-callcenter \
+        freeswitch-mod-say-en freeswitch-mod-say-es \
+        freeswitch-mod-http-cache freeswitch-mod-mariadb \
+        freeswitch-mod-flite freeswitch-mod-voicemail \
+        freeswitch-mod-voicemail-ivr freeswitch-music-default \
+        freeswitch-sounds-en-us-callie \
+        mg vim openssl unzip odbc-postgresql && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+###############################################################################
+# ⌁ 2) RUNTIME ▸ copia + root-xml generado
+###############################################################################
+FROM debian:bullseye AS runtime
+
+COPY --from=freeswitch-build /usr /usr
+
+COPY --from=freeswitch-build /etc/freeswitch /etc/freeswitch
+COPY --from=freeswitch-build /var/lib/freeswitch /var/lib/freeswitch
+COPY --from=freeswitch-build /var/log/freeswitch /var/log/freeswitch
+
+RUN set -e; \
+    mkdir -p /etc/freeswitch; \
+    [ -f /etc/freeswitch/freeswitch.xml ] || \
+      printf '%s\n' \
+        '<document type="freeswitch/xml">' \
+        '  <include><!--#include "conf/autoload_configs/*.xml"--></include>' \
+        '</document>' \
+        > /etc/freeswitch/freeswitch.xml
+
+# overrides opcionales
+COPY ./mod/    /usr/lib/freeswitch/mod/
+COPY scripts/  /opt/scripts/
+COPY conf/     /etc/freeswitch/conf/
+
+# parche DSN (opcional)
+RUN set -e; \
+    CFG=$(find /etc/freeswitch -name switch.conf.xml | head -n1 || true); \
+    if [ -n "$CFG" ]; then \
+        sed -E -i \
+          's|.*<param name="core-db-dsn".*|<param name="core-db-dsn" value="odbc://DRIVER=/usr/lib/x86_64-linux-gnu/odbc/psqlodbcw.so;Servername=$${FS_CORE_DB_SERVER};Username=$${FS_CORE_DB_USER};Password=$${FS_CORE_DB_PASS};Database=$${FS_CORE_DB_DATABASE}" />|' \
+          "$CFG"; \
+    fi
+
+EXPOSE 8021 5060/tcp 5060/udp 16384-16484/udp
+ENTRYPOINT ["/usr/bin/freeswitch"]
+CMD ["-nonat","-nf"]

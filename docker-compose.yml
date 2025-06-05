@@ -1,29 +1,45 @@
-version: '3.8'
 services:
   freeswitch:
-    image: signalwire/freeswitch:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.freeswitch
+      args:
+        - SIGNALWIRE_LOGIN=${SIGNALWIRE_LOGIN}
+        - SIGNALWIRE_PASSWORD=${SIGNALWIRE_PASSWORD}
+    image: freeswitch-custom:1.10.12
+    platform: linux/amd64
     container_name: freeswitch
+
+    # ⇒ puertos RTP/SIP y ESL
     ports:
       - "5060:5060/udp"
       - "5060:5060/tcp"
       - "8021:8021"
       - "16384-16484:16384-16484/udp"
-    networks:
-      - freeswitch_unimrcp_net
-    depends_on:
-      - unimrcp
+
+    cap_add:
+      - SYS_NICE
+    ulimits:
+      rtprio: 99
+
     environment:
-      - FREESWITCH_EVENT_SOCKET_PASSWORD=ClueCon
+      FS_CORE_DB_SERVER: postgres
+      FS_CORE_DB_USER:   fs_user
+      FS_CORE_DB_PASS:   fs_pass
+      FS_CORE_DB_DATABASE: fs_core
+
     restart: unless-stopped
 
   unimrcp:
-    image: unimrcp/unimrcp:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.unimrcp
+    platform: linux/amd64
     container_name: unimrcp
     ports:
       - "5062:5062/tcp"
       - "1554:1554/tcp"
-    networks:
-      - freeswitch_unimrcp_net
+    networks: [freeswitch_unimrcp_net]
     restart: unless-stopped
 
 networks:

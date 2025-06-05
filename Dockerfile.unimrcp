@@ -1,0 +1,24 @@
+FROM debian:bullseye-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      build-essential git cmake libapr1-dev libaprutil1-dev \
+      libsofia-sip-ua-dev libexpat1-dev libssl-dev pkg-config \
+      ca-certificates libpcre3-dev libtool automake autoconf libxml2-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt
+
+RUN git clone https://github.com/unispeech/unimrcp.git && \
+    cd unimrcp && \
+    sed -i '/apr_pool_mutex_set/d' libs/apr-toolkit/src/apt_pool.c && \
+    ./bootstrap && \
+    ./configure --with-sofia-sip=/usr && \
+    make -j"$(nproc)" && \
+    make install
+
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+EXPOSE 5062 1554
+
+CMD ["/usr/local/unimrcp/bin/unimrcpserver", "-c", "/usr/local/unimrcp/conf/unimrcpserver.xml", "-w"]
